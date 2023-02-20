@@ -16,21 +16,69 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const RotatingBox(title: 'Flutter Demo Home Page'),
+      home: const RotatingAndFlippingCircle(),
     );
   }
 }
 
-class RotatingBox extends StatefulWidget {
-  const RotatingBox({super.key, required this.title});
-
-  final String title;
-
-  @override
-  State<RotatingBox> createState() => _MyRotatingBox();
+enum CircleSide {
+  left,
+  right,
 }
 
-class _MyRotatingBox extends State<RotatingBox>
+extension ToPath on CircleSide {
+  Path toPath(Size size) {
+    var path = Path();
+    late Offset offset;
+    late bool clockwise;
+
+    switch (this) {
+      case CircleSide.left:
+        path.moveTo(size.width, 0);
+        offset = Offset(size.width, size.height);
+        clockwise = false;
+        break;
+      case CircleSide.right:
+        offset = Offset(0, size.height);
+        clockwise = true;
+        break;
+      default:
+    }
+    path.arcToPoint(offset,
+        radius: Radius.elliptical(size.width / 2, size.height / 2),
+        clockwise: clockwise);
+    path.close();
+    return path;
+  }
+}
+
+class HalfCircleClipper extends CustomClipper<Path> {
+  final CircleSide circeSide;
+
+  HalfCircleClipper(this.circeSide);
+
+  @override
+  Path getClip(Size size) {
+    return circeSide.toPath(size);
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) {
+    return true;
+  }
+}
+
+class RotatingAndFlippingCircle extends StatefulWidget {
+  const RotatingAndFlippingCircle({
+    super.key,
+  });
+
+  @override
+  State<RotatingAndFlippingCircle> createState() =>
+      _MyRotatingAndFlippingCircle();
+}
+
+class _MyRotatingAndFlippingCircle extends State<RotatingAndFlippingCircle>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
@@ -58,33 +106,28 @@ class _MyRotatingBox extends State<RotatingBox>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, childWidget) {
-            return Transform(
-              // origin: Offset(dx, dy),
-              alignment: Alignment.center,
-              transform: Matrix4.identity()..rotateZ(_animation.value),
-              child: childWidget,
-            );
-          },
-          child: Container(
-            height: 100,
-            width: 100,
-            decoration: BoxDecoration(
-                color: Colors.redAccent,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      spreadRadius: 5,
-                      blurRadius: 7,
-                      offset: const Offset(0, 3)),
-                ]),
+        body: SafeArea(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ClipPath(
+            clipper: HalfCircleClipper(CircleSide.left),
+            child: Container(
+              height: 100,
+              width: 100,
+              color: Colors.white,
+            ),
           ),
-        ),
+          ClipPath(
+            clipper: HalfCircleClipper(CircleSide.right),
+            child: Container(
+              height: 100,
+              width: 100,
+              color: Colors.green,
+            ),
+          )
+        ],
       ),
-    );
+    ));
   }
 }
